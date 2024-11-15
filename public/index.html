@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thermostat Control Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #controls {
+            margin: 20px 0;
+        }
+        #status {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        select {
+            padding: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Thermostat Control Dashboard</h1>
+    <div id="controls">
+        <h2>Set Temperature</h2>
+        <button onclick="setTemperature(25)">25°C</button>
+        <button onclick="setTemperature(30)">30°C</button>
+        <input type="number" id="customTemp" placeholder="Custom Temp (15-30)" min="15" max="30">
+        <button onclick="setCustomTemperature()">Set Custom Temp</button>
+        
+        <h2>Mode</h2>
+        <select id="modeSelect">
+            <option value="1">Cool</option>
+            <option value="2">Dry</option>
+            <option value="3">Heat</option>
+            <option value="0">Fan</option>
+            <option value="4">Auto</option>
+        </select>
+        <button onclick="setMode()">Set Mode</button>
+
+        <h2>Fan Speed</h2>
+        <select id="fanSpeedSelect">
+            <option value="0">Auto</option>
+            <option value="1">Low</option>
+            <option value="2">Medium</option>
+            <option value="3">High</option>
+        </select>
+        <button onclick="setFanSpeed()">Set Fan Speed</button>
+
+        <h2>Power Control</h2>
+        <button onclick="turnOn()">Turn On</button>
+        <button onclick="turnOff()">Turn Off</button>
+    </div>
+    
+    <div id="status"></div>
+    <div>
+        <h2>Current Room Temperature: <span id="roomTemp">--</span>°C</h2>
+    </div>
+
+    <script>
+        const thermostatIP = "192.168.43.100"; // Replace with your thermostat's IP
+
+        // Function to fetch and display the current status
+        function fetchStatus() {
+            fetch(`http://${thermostatIP}/aircon/get_control_info`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('status').innerText = `Power: ${data.pow}, Mode: ${data.mode}, Set Temp: ${data.stemp}°C, Fan Speed: ${data.f_rate}`;
+                })
+                .catch(error => console.error('Error fetching control info:', error));
+
+            fetch(`http://${thermostatIP}/aircon/get_sensor_info`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('roomTemp').innerText = data.htemp;
+                })
+                .catch(error => console.error('Error fetching sensor info:', error));
+        }
+
+        // Function to set the temperature
+        function setTemperature(temp) {
+            fetch(`http://${thermostatIP}/aircon/set_control_info?pow=1&mode=1&stemp=${temp}&f_rate=3&f_dir=0`)
+                .then(response => {
+                    if (response.ok) {
+                        console.log(`Temperature set to ${temp}°C`);
+                        fetchStatus(); // Refresh status after setting
+                    } else {
+                        console.error('Failed to set temperature');
+                    }
+                })
+                .catch(error => console.error('Error setting temperature:', error));
+        }
+
+        // Function to set custom temperature
+        function setCustomTemperature() {
+            const customTemp = document.getElementById('customTemp').value;
+            if (customTemp >= 15 && customTemp <= 30) {
+                setTemperature(customTemp);
+            } else {
+                alert("Please enter a temperature between 15 and 30°C.");
+            }
+        }
+
+        // Function to set the mode
+        function setMode() {
+            const mode = document.getElementById('modeSelect').value;
+            fetch(`http://${thermostatIP}/aircon/set_control_info?pow=1&mode=${mode}&stemp=25&f_rate=3&f_dir=0`)
+                .then(response => {
+                    if (response.ok) {
+                        console.log(`Mode set to ${mode}`);
+                        fetchStatus(); // Refresh status after setting
+                    } else {
+                        console.error('Failed to set mode');
+                    }
+                })
+                .catch(error => console.error('Error setting mode:', error));
+        }
+
+        // Function to set the fan speed
+        function setFanSpeed() {
+            const fanSpeed = document.getElementById('fanSpeedSelect').value;
+            fetch(`http://${thermostatIP}/aircon/set_control_info?pow=1&mode=1&stemp=25&f_rate=${fanSpeed}&f_dir=0`)
+                .then(response => {
+                    if (response.ok) {
+                        console.log(`Fan speed set to ${fanSpeed}`);
+                        fetchStatus(); // Refresh status after setting
+                    } else {
+                        console.error('Failed to set fan speed');
+                    }
+                })
+                .catch(error => console.error('Error setting fan speed:', error));
+        }
+
+        // Function to turn on the thermostat
+        function turnOn() {
+            fetch(`http://${thermostatIP}/aircon/set_control_info?pow=1&mode=1&stemp=25&f_rate=3&f_dir=0`)
+                .then(response => {
+                    if (response.ok) {
+                        console.log('Thermostat turned on');
+                        fetchStatus(); // Refresh status after turning on
+                    } else {
+                        console.error('Failed to turn on thermostat');
+                    }
+                })
+                .catch(error => console.error('Error turning on thermostat:', error));
+        }
+
+        // Function to turn off the thermostat
+        function turnOff() {
+            fetch(`http://${thermostatIP}/aircon/set_control_info?pow=0&mode=1&stemp=25&f_rate=3&f_dir=0`)
+                .then(response => {
+                    if (response.ok) {
+                        console.log('Thermostat turned off');
+                        fetchStatus(); // Refresh status after turning off
+                    } else {
+                        console.error('Failed to turn off thermostat');
+                    }
+                })
+                .catch(error => console.error('Error turning off thermostat:', error));
+        }
+
+        // Initial fetch to display current status
+        fetchStatus();
+    </script>
+</body>
+</html>
